@@ -5,12 +5,59 @@
 
 using namespace std;
 
+void gaussJordanElimination(vector<vector<double>> &A, vector<double> &B)
+{
+    int n = A.size();
+    for (int i = 0; i < n; ++i)
+    {
+        // Find pivot row
+        int pivotRow = i;
+        for (int j = i + 1; j < n; ++j)
+        {
+            if (abs(A[j][i]) > abs(A[pivotRow][i]))
+            {
+                pivotRow = j;
+            }
+        }
+
+        // Swap rows if necessary
+        if (i != pivotRow)
+        {
+            swap(A[i], A[pivotRow]);
+            swap(B[i], B[pivotRow]);
+        }
+
+        // Normalize the pivot row
+        double pivot = A[i][i];
+        for (int j = 0; j < n; ++j)
+        {
+            A[i][j] /= pivot;
+        }
+        B[i] /= pivot;
+
+        // Eliminate elements above and below pivot
+        for (int j = 0; j < n; ++j)
+        {
+            if (j != i)
+            {
+                double factor = A[j][i];
+                for (int k = 0; k < n; ++k)
+                {
+                    A[j][k] -= factor * A[i][k];
+                }
+                B[j] -= factor * B[i];
+            }
+        }
+    }
+}
+
 // Straight line y = a + b * x
 void straightLineFit(const vector<double> &x, const vector<double> &y)
 {
     int n = x.size();
     double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
+    // Keep existing sum calculations
     for (int i = 0; i < n; i++)
     {
         sumX += x[i];
@@ -19,8 +66,16 @@ void straightLineFit(const vector<double> &x, const vector<double> &y)
         sumX2 += x[i] * x[i];
     }
 
-    double b = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    double a = (sumY - b * sumX) / n;
+    // Set up matrix equation
+    vector<vector<double>> A = {
+        {(double)n, sumX},
+        {sumX, sumX2}};
+    vector<double> B = {sumY, sumXY};
+
+    // Solve using Gauss-Jordan elimination
+    gaussJordanElimination(A, B);
+    double a = B[0]; // intercept
+    double b = B[1]; // slope
 
     cout << "Straight Line Fit: y = " << a << " + " << b << " * x" << endl;
 
@@ -37,6 +92,7 @@ void parabolaFit(const vector<double> &x, const vector<double> &y)
     double sumX = 0, sumX2 = 0, sumX3 = 0, sumX4 = 0;
     double sumY = 0, sumXY = 0, sumX2Y = 0;
 
+    // Keep existing sum calculations
     for (int i = 0; i < n; i++)
     {
         double x2 = x[i] * x[i];
@@ -49,14 +105,18 @@ void parabolaFit(const vector<double> &x, const vector<double> &y)
         sumX2Y += x2 * y[i];
     }
 
-    // Solving linear equations using matrix approach
-    double det = n * (sumX2 * sumX4 - sumX3 * sumX3) - sumX * (sumX * sumX4 - sumX2 * sumX3) + sumX2 * (sumX * sumX3 - sumX2 * sumX2);
+    // Set up matrix equation
+    vector<vector<double>> A = {
+        {(double)n, sumX, sumX2},
+        {sumX, sumX2, sumX3},
+        {sumX2, sumX3, sumX4}};
+    vector<double> B = {sumY, sumXY, sumX2Y};
 
-    double a = (sumY * (sumX2 * sumX4 - sumX3 * sumX3) - sumX * (sumXY * sumX4 - sumX3 * sumX2Y) + sumX2 * (sumXY * sumX3 - sumX2Y * sumX2)) / det;
-
-    double b = (n * (sumXY * sumX4 - sumX3 * sumX2Y) - sumY * (sumX * sumX4 - sumX2 * sumX3) + sumX2 * (sumX * sumX2Y - sumXY * sumX2)) / det;
-
-    double c = (n * (sumX2 * sumX2Y - sumXY * sumX3) - sumX * (sumX * sumX2Y - sumXY * sumX2) + sumY * (sumX * sumX3 - sumX2 * sumX2)) / det;
+    // Solve using Gauss-Jordan elimination
+    gaussJordanElimination(A, B);
+    double a = B[0]; // constant term
+    double b = B[1]; // coefficient of x
+    double c = B[2]; // coefficient of x^2
 
     cout << "Parabola Fit: y = " << a << " + " << b << " * x + " << c << " * x^2" << endl;
 
@@ -72,6 +132,7 @@ void exponentialFit(const vector<double> &x, const vector<double> &y)
     int n = x.size();
     double sumX = 0, sumLogY = 0, sumXLogY = 0, sumX2 = 0;
 
+    // Keep existing sum and error check
     for (int i = 0; i < n; i++)
     {
         if (y[i] <= 0)
@@ -79,18 +140,23 @@ void exponentialFit(const vector<double> &x, const vector<double> &y)
             cout << "Error: y values must be positive for exponential fit." << endl;
             return;
         }
-        double logY = log(y[i]); // Transform y into log space
+        double logY = log(y[i]);
         sumX += x[i];
         sumLogY += logY;
         sumXLogY += x[i] * logY;
         sumX2 += x[i] * x[i];
     }
 
-    double bLog = (n * sumXLogY - sumX * sumLogY) / (n * sumX2 - sumX * sumX);
-    double aLog = (sumLogY - bLog * sumX) / n;
+    // Set up matrix equation
+    vector<vector<double>> A = {
+        {(double)n, sumX},
+        {sumX, sumX2}};
+    vector<double> B = {sumLogY, sumXLogY};
 
-    double a = exp(aLog);
-    double b = exp(bLog);
+    // Solve using Gauss-Jordan elimination
+    gaussJordanElimination(A, B);
+    double a = exp(B[0]);
+    double b = exp(B[1]);
 
     cout << "Exponential Fit: y = " << a << " * " << b << "^x" << endl;
 
@@ -106,6 +172,7 @@ void powerFit(const vector<double> &x, const vector<double> &y)
     int n = x.size();
     double sumLogX = 0, sumLogY = 0, sumLogXLogY = 0, sumLogX2 = 0;
 
+    // Keep existing sum and error check
     for (int i = 0; i < n; i++)
     {
         if (x[i] <= 0 || y[i] <= 0)
@@ -121,9 +188,16 @@ void powerFit(const vector<double> &x, const vector<double> &y)
         sumLogX2 += logX * logX;
     }
 
-    double b = (n * sumLogXLogY - sumLogX * sumLogY) / (n * sumLogX2 - sumLogX * sumLogX);
-    double logA = (sumLogY - b * sumLogX) / n;
-    double a = exp(logA);
+    // Set up matrix equation
+    vector<vector<double>> A = {
+        {(double)n, sumLogX},
+        {sumLogX, sumLogX2}};
+    vector<double> B = {sumLogY, sumLogXLogY};
+
+    // Solve using Gauss-Jordan elimination
+    gaussJordanElimination(A, B);
+    double a = exp(B[0]);
+    double b = B[1];
 
     cout << "Power Fit: y = " << a << " * x^" << b << endl;
 
